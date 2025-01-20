@@ -28,9 +28,9 @@
 ## Publish Maven Central
 
 1. If you didn't already, wait for the [Publish Release action](https://github.com/mobile-dev-inc/maestro/actions/workflows/publish-release.yml) to finish (triggered by the tag push)
-3. Go to [OSS Sonatype](https://s01.oss.sonatype.org/) and login with user/password
-4. Go to Staging Repositories, select the repository uploaded from the trigger above.
-5. Click "Close" and then "Release". Each of these operations take a couple minutes to complete
+2. Go to [OSS Sonatype](https://s01.oss.sonatype.org/) and login with user/password
+3. Go to Staging Repositories, select the repository uploaded from the trigger above.
+4. Click "Close" and then "Release". Each of these operations take a couple minutes to complete
 
 ____________________________________________________________________________________________________________________________________________________
 **CAUTION:** You should go back to the [notion document](https://www.notion.so/Maestro-Release-Run-Book-78159c6f80de4492a6e9e05bb490cf60?pvs=4) to see how to update the **Robin** and **Maestro Cloud** versions before updating the **CLI**
