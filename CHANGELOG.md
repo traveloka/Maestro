@@ -4,8 +4,8 @@
 
 ## 1.39.13
 
-- Feat: Adding upload route back again
-- Removing Analyze logs from CI uploads
+- Fix : Adding upload route back again
+- Feature: Removing Analyze logs from CI uploads
 
 ## 1.39.12
 
