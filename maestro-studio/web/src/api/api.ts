@@ -39,19 +39,19 @@ const makeRequest = async <T>(
   const response = await fetch(path, options);
   if (!response.ok) {
     const responseBody = await response.text();
-    throw new HttpError(response.status, responseBody);
+    throw new HttpError(response.status, `Error requesting ${path}. Details: ${responseBody}`);
   }
   const contentLength = response.headers.get("Content-Length");
   if (contentLength === "0") {
     return null as any as T;
   }
   if (type === "text") {
-    return (await response.text()) as any as T;
+    return (await response.text()) as T;
   }
   try {
     return (await response.json()) as T;
   } catch (error: any) {
-    throw new Error("Failed to parse JSON: " + _.get(error, "message"));
+    throw new Error(`Failed to parse JSON from ${path}: ` + _.get(error, "message"));
   }
 };
 
@@ -93,6 +93,10 @@ export const API = {
       (url) => makeRequest("GET", url),
       config
     );
+  },
+
+  getMock: async (): Promise<string> => {
+      return makeRequest("GET", "/api/get-mock");
   },
   runCommand: async (yaml: string, dryRun?: boolean): Promise<void> => {
     await makeRequest("POST", "/api/run-command", { yaml, dryRun });

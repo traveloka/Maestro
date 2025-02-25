@@ -25,6 +25,7 @@ import kotlin.io.path.createTempDirectory
 import maestro.orchestra.MaestroCommand
 import maestro.orchestra.yaml.YamlCommandReader
 import maestro.orchestra.yaml.YamlFluentCommand
+import java.io.BufferedReader
 
 private data class RunCommandRequest(
     val yaml: String,
@@ -63,6 +64,42 @@ object DeviceService {
                 call.respond(response)
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
+            }
+        }
+
+        routing.get("/api/get-mock") {
+            try {
+                val process = ProcessBuilder("python3", "script/get_mock.py")
+                    .redirectErrorStream(true)
+                    .start()
+
+                val output = process.inputStream.bufferedReader().use(BufferedReader::readText)
+                val exitCode = process.waitFor()
+
+                if (exitCode != 0) {
+                    println("getMock.py failed with exit code $exitCode: $output")
+                    throw Exception("getMock.py failed with exit code $exitCode")
+                }
+
+                if (output.trim().isNotEmpty()) {
+                    try {
+                        jacksonObjectMapper().readTree(output).forEach { node ->
+                            if (!node.isObject) {
+                                throw Exception("the python script does not response in valid json")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("the python script does not response in valid json: $e")
+                        throw Exception("the python script does not response in valid json")
+                    }
+                }
+
+                val response = jacksonObjectMapper().writeValueAsString(output)
+                call.respond(response)
+            } catch (e: Exception) {
+                println("Error in run command v2 $e")
+                call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
+                //You could also add an error log here to the log of the server.
             }
         }
         routing.post("/api/format-flow") {

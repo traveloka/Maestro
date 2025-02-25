@@ -90,6 +90,21 @@ export const useRepl = () => {
     setCommandStatus(command.id, 'running');
     try {
       await API.runCommand(command.yaml);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const mockReplCommands = await runGetMocks();
+
+      setRepl(prevRepl => {
+          const newCommands = prevRepl.commands;
+          var index = newCommands.findIndex(c => c.id === command.id);
+          for(let mockReplCommand of mockReplCommands){
+            newCommands.splice(index, 0, mockReplCommand);
+            index += 1;
+          }
+          return {
+              ...prevRepl,
+              commands: newCommands
+          };
+      });
       setCommandStatus(command.id, 'success');
       return true;
     } catch (e: any) {
@@ -138,6 +153,41 @@ export const useRepl = () => {
       commands: [...prevRepl.commands, ...commands]
     }))
     return await runCommands(commands);
+  }
+
+  const runGetMocks = async (): Promise<ReplCommand[]> => {
+    const rawResult = await API.getMock();
+
+    // Ensure rawResult is a valid JSON string representing an array
+    let parsedResults: { runScript?: { file?: string; env?: any } }[] = [];
+    try {
+        parsedResults = JSON.parse(rawResult); // Parse the entire string as an array
+        if (!Array.isArray(parsedResults)) {
+            throw new Error("Parsed result is not an array");
+        }
+    } catch (error) {
+        console.error("Failed to parse API response:", rawResult, error);
+        setErrorMessage("Error parsing API response");
+        return [];
+    }
+
+    // Update REPL state for mock results
+    const newCommands = parsedResults.map(item => {
+        const env = item.runScript?.env || {}; // Ensure env is always an object
+        const mockResult = {
+            runScript: {
+                file: item.runScript?.file || "script/reproxy.js",
+                env: {
+                    mode: env.mode,
+                    api: env.api,
+                    behavior: env.behavior
+                }
+            }
+        };
+        return YAML.stringify(mockResult);
+    }).flatMap(parsed => parseCommands(parsed))
+    newCommands.forEach(command => command.status = 'success');
+    return newCommands;
   }
 
   const runCommandIds = async (ids: string[]): Promise<boolean> => {
