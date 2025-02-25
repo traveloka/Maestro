@@ -41,6 +41,10 @@ private data class FormattedFlow(
     val commands: String,
 )
 
+private data class FilenameRequest(
+    val filename: String,
+)
+
 object DeviceService {
 
     private const val MAX_SCREENSHOTS = 10
@@ -66,9 +70,10 @@ object DeviceService {
                 call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
             }
         }
-        routing.get("/api/get-mock") {
+        routing.post("/api/get-mock") {
             try {
-                val process = ProcessBuilder("python3", "script/get_mock.py")
+                val request = call.parseBody<FilenameRequest>()
+                val process = ProcessBuilder("python3", "script/get_mock.py", request.filename)
                     .redirectErrorStream(true)
                     .start()
 

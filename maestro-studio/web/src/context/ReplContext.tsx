@@ -15,8 +15,10 @@ const ReplContext = createContext<{
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
   isMockGenerationEnabled: boolean;
   toggleMockGeneration: () => void;
+  mockFilename: string;
+  setMockFilename: React.Dispatch<React.SetStateAction<string>>;
 }>({ repl: initialState, setRepl: () => {}, errorMessage: null, setErrorMessage: () => {}, isMockGenerationEnabled: false,
-toggleMockGeneration: () => {} });
+toggleMockGeneration: () => {}, mockFilename: "", setMockFilename: () => {} });
 
 const restoreRepl = () => {
   const savedRepl = localStorage.getItem('repl');
@@ -33,6 +35,7 @@ export const ReplProvider = ({ children }: {
   const [repl, setRepl] = useState<Repl>(() => restoreRepl());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isMockGenerationEnabled, changeToggle] = useState(false);
+  const [mockFilename, setMockFilename] = useState("");
 
   useEffect(() => {
     localStorage.setItem('repl', JSON.stringify(repl));
@@ -43,7 +46,7 @@ export const ReplProvider = ({ children }: {
   };
 
   return (
-    <ReplContext.Provider value={{ repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration }}>
+    <ReplContext.Provider value={{ repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration, mockFilename, setMockFilename }}>
       {children}
     </ReplContext.Provider>
   );
@@ -52,7 +55,7 @@ export const ReplProvider = ({ children }: {
 export const useRepl = () => {
   const context = useContext(ReplContext);
 
-  const { repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration } = context;
+  const { repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration, mockFilename, setMockFilename } = context;
 
   const setCommandStatus = (id: string, commandStatus: ReplCommandStatus) => {
     setRepl(prevRepl => ({
@@ -101,7 +104,7 @@ export const useRepl = () => {
 
       if (isMockGenerationEnabled) {
           await new Promise(resolve => setTimeout(resolve, 3000));
-          const mockReplCommands = await runGetMocks();
+          const mockReplCommands = await runGetMocks(mockFilename);
 
           setRepl(prevRepl => {
               const newCommands = prevRepl.commands;
@@ -170,8 +173,8 @@ export const useRepl = () => {
     return await runCommands(commands);
   }
 
-  const runGetMocks = async (): Promise<ReplCommand[]> => {
-    const rawResult = await API.getMock();
+  const runGetMocks = async (filename: string): Promise<ReplCommand[]> => {
+    const rawResult = await API.getMock(filename);
 
     // Ensure rawResult is a valid JSON string representing an array
     let parsedResults: { runScript?: { file?: string; env?: any } }[] = [];
@@ -224,6 +227,8 @@ export const useRepl = () => {
     reorderCommands,
     isMockGenerationEnabled,
     toggleMockGeneration,
+    mockFilename,
+    setMockFilename,
   };
 };
 

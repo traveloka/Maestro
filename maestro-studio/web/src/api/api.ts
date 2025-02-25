@@ -95,8 +95,8 @@ export const API = {
     );
   },
 
-  getMock: async (): Promise<string> => {
-      return makeRequest("GET", "/api/get-mock");
+  getMock: async (filename: string): Promise<string> => {
+      return makeRequest("POST", "/api/get-mock", { filename });
   },
   flushMock: async (): Promise<void> => {
       await makeRequest("POST", "/api/flush-mock");
