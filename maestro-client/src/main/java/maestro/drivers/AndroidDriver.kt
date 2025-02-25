@@ -509,11 +509,12 @@ class AndroidDriver(
         return metrics.measured("operation", mapOf("command" to "startScreenRecording")) {
 
             val deviceScreenRecordingPath = "/sdcard/maestro-screenrecording.mp4"
+            val shellCommand = if (getDeviceApiLevel() >= 34) "screenrecord" else "/data/local/tmp/screenrecord"
 
             val future = CompletableFuture.runAsync({
                 val timeLimit = if (getDeviceApiLevel() >= 34) "--time-limit 0" else ""
                 try {
-                    shell("screenrecord $timeLimit --bit-rate '100000' $deviceScreenRecordingPath")
+                    shell("$shellCommand $timeLimit --bit-rate '100000' $deviceScreenRecordingPath")
                 } catch (e: IOException) {
                     throw IOException(
                         "Failed to capture screen recording on the device. Note that some Android emulators do not support screen recording. " +
@@ -525,7 +526,7 @@ class AndroidDriver(
 
             object : ScreenRecording {
                 override fun close() {
-                    dadb.shell("killall -INT screenrecord") // Ignore exit code
+                    dadb.shell("killall -INT $shellCommand") // Ignore exit code
                     future.get()
                     Thread.sleep(3000)
                     dadb.pull(out, deviceScreenRecordingPath)
