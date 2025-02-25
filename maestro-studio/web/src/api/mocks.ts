@@ -58,9 +58,6 @@ const handlers = [
     if (!dryRun) await delay(1000)
     return new Response(null, { status: 200 })
   }),
-  http.get("/api/get-mock", async () => {
-      return new Response(null, { status: 200 })
-    }),
   http.get("/api/device-screen/sse", async () => {
     return deviceScreenSseController.newResponse();
   }),

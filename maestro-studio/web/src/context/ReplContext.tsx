@@ -13,7 +13,10 @@ const ReplContext = createContext<{
   setRepl: React.Dispatch<React.SetStateAction<Repl>>;
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
-}>({ repl: initialState, setRepl: () => {}, errorMessage: null, setErrorMessage: () => {} });
+  isMockGenerationEnabled: boolean;
+  toggleMockGeneration: () => void;
+}>({ repl: initialState, setRepl: () => {}, errorMessage: null, setErrorMessage: () => {}, isMockGenerationEnabled: false,
+toggleMockGeneration: () => {} });
 
 const restoreRepl = () => {
   const savedRepl = localStorage.getItem('repl');
@@ -29,13 +32,18 @@ export const ReplProvider = ({ children }: {
 }) => {
   const [repl, setRepl] = useState<Repl>(() => restoreRepl());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isMockGenerationEnabled, changeToggle] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('repl', JSON.stringify(repl));
   }, [repl]);
 
+  const toggleMockGeneration = () => {
+    changeToggle(prev => !prev);
+  };
+
   return (
-    <ReplContext.Provider value={{ repl, setRepl, errorMessage, setErrorMessage }}>
+    <ReplContext.Provider value={{ repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration }}>
       {children}
     </ReplContext.Provider>
   );
@@ -44,7 +52,7 @@ export const ReplProvider = ({ children }: {
 export const useRepl = () => {
   const context = useContext(ReplContext);
 
-  const { repl, setRepl, errorMessage, setErrorMessage } = context;
+  const { repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration } = context;
 
   const setCommandStatus = (id: string, commandStatus: ReplCommandStatus) => {
     setRepl(prevRepl => ({
@@ -90,21 +98,28 @@ export const useRepl = () => {
     setCommandStatus(command.id, 'running');
     try {
       await API.runCommand(command.yaml);
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const mockReplCommands = await runGetMocks();
 
-      setRepl(prevRepl => {
-          const newCommands = prevRepl.commands;
-          var index = newCommands.findIndex(c => c.id === command.id);
-          for(let mockReplCommand of mockReplCommands){
-            newCommands.splice(index, 0, mockReplCommand);
-            index += 1;
-          }
-          return {
-              ...prevRepl,
-              commands: newCommands
-          };
-      });
+      if (isMockGenerationEnabled) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          const mockReplCommands = await runGetMocks();
+
+          setRepl(prevRepl => {
+              const newCommands = prevRepl.commands;
+              var index = newCommands.findIndex(c => c.id === command.id);
+              for(let mockReplCommand of mockReplCommands){
+                newCommands.splice(index, 0, mockReplCommand);
+                index += 1;
+              }
+              return {
+                  ...prevRepl,
+                  commands: newCommands
+              };
+          });
+      } else {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await flushMocks();
+      }
+
       setCommandStatus(command.id, 'success');
       return true;
     } catch (e: any) {
@@ -190,6 +205,10 @@ export const useRepl = () => {
     return newCommands;
   }
 
+  const flushMocks = async (): Promise<void> => {
+    await API.flushMock();
+  }
+
   const runCommandIds = async (ids: string[]): Promise<boolean> => {
     const commands = repl.commands.filter(command => ids.includes(command.id));
     return await runCommands(commands);
@@ -203,6 +222,8 @@ export const useRepl = () => {
     runCommandIds,
     deleteCommands,
     reorderCommands,
+    isMockGenerationEnabled,
+    toggleMockGeneration,
   };
 };
 

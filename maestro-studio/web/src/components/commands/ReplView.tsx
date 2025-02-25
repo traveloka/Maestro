@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { API } from "../../api/api";
 import { Icon } from "../design-system/icon";
+import { Toggle } from "../design-system/toggle";
 import { FormattedFlow, ReplCommand } from "../../helpers/models";
 import { SaveFlowModal } from "./SaveFlowModal";
 import ReplHeader from "./ReplHeader";
@@ -8,6 +9,7 @@ import CommandList from "./CommandList";
 import CommandCreator from "./CommandCreator";
 import { useDeviceContext } from "../../context/DeviceContext";
 import { useRepl } from '../../context/ReplContext';
+import clsx from "clsx";
 
 const getFlowText = (selected: ReplCommand[]): string => {
   return selected
@@ -21,7 +23,7 @@ const ReplView = () => {
   const [_selected, setSelected] = useState<string[]>([]);
   const [formattedFlow, setFormattedFlow] =
     useState<FormattedFlow | null>(null);
-  const { repl, errorMessage, setErrorMessage, reorderCommands, deleteCommands, runCommandYaml, runCommandIds } = useRepl();
+  const { repl, errorMessage, setErrorMessage, reorderCommands, deleteCommands, runCommandYaml, runCommandIds, isMockGenerationEnabled, toggleMockGeneration } = useRepl();
   const listSize = repl?.commands.length || 0;
   const previousListSize = useRef(0);
 
@@ -72,6 +74,17 @@ const ReplView = () => {
 
   return (
     <>
+      <div
+        className={clsx(
+          "py-2", "text-gray-900 dark:text-white"
+        )}
+      >
+        <Toggle
+          checked={isMockGenerationEnabled}
+          onChange={toggleMockGeneration}
+          label="Enable Effortless Auto-Mock Generation"
+        />
+      </div>
       {repl.commands.length > 0 ? (
         <div className="flex flex-col h-full">
           <div className="px-12">

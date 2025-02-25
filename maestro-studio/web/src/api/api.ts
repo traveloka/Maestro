@@ -98,6 +98,9 @@ export const API = {
   getMock: async (): Promise<string> => {
       return makeRequest("GET", "/api/get-mock");
   },
+  flushMock: async (): Promise<void> => {
+      await makeRequest("POST", "/api/flush-mock");
+  },
   runCommand: async (yaml: string, dryRun?: boolean): Promise<void> => {
     await makeRequest("POST", "/api/run-command", { yaml, dryRun });
   },

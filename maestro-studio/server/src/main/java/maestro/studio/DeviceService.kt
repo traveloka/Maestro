@@ -66,7 +66,6 @@ object DeviceService {
                 call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
             }
         }
-
         routing.get("/api/get-mock") {
             try {
                 val process = ProcessBuilder("python3", "script/get_mock.py")
@@ -77,8 +76,8 @@ object DeviceService {
                 val exitCode = process.waitFor()
 
                 if (exitCode != 0) {
-                    println("getMock.py failed with exit code $exitCode: $output")
-                    throw Exception("getMock.py failed with exit code $exitCode")
+                    println("get_mock.py failed with exit code $exitCode: $output")
+                    throw Exception("get_mock.py failed with exit code $exitCode")
                 }
 
                 if (output.trim().isNotEmpty()) {
@@ -99,7 +98,26 @@ object DeviceService {
             } catch (e: Exception) {
                 println("Error in run command v2 $e")
                 call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
-                //You could also add an error log here to the log of the server.
+            }
+        }
+        routing.post("/api/flush-mock") {
+            try {
+                val process = ProcessBuilder("python3", "script/flush_mock.py")
+                    .redirectErrorStream(true)
+                    .start()
+
+                val output = process.inputStream.bufferedReader().use(BufferedReader::readText)
+                val exitCode = process.waitFor()
+
+                if (exitCode != 0) {
+                    println("flush_mock.py failed with exit code $exitCode: $output")
+                    throw Exception("flush_mock.py failed with exit code $exitCode")
+                }
+                val response = jacksonObjectMapper().writeValueAsString(output)
+                call.respond(response)
+            } catch (e: Exception) {
+                println("Error in run command v2 $e")
+                call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
             }
         }
         routing.post("/api/format-flow") {
