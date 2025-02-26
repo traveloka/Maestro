@@ -74,28 +74,28 @@ const ReplView = () => {
 
   return (
     <>
-      <div>
-      <div className="px-12 py-2">
-        <Toggle
-          checked={isMockGenerationEnabled}
-          onChange={toggleMockGeneration}
-          label="Enable Effortless Auto-Mock Generation"
-        />
-      </div>
-      {isMockGenerationEnabled && (
-          <div className="px-12 py-3 border-b dark:border-slate-800 flex-wrap pt-4">
-              <TextArea
-                placeholder="Insert a name for your mock…"
-                value={mockFilename}
-                onChange={(e) => setMockFilename(e.target.value)}
-                rows={1}
-                resize="none"
-              />
-          </div>
-       )}
-      </div>
       {repl.commands.length > 0 ? (
         <div className="flex flex-col h-full">
+          <div>
+            <div className="px-12 py-2">
+              <Toggle
+                checked={isMockGenerationEnabled}
+                onChange={toggleMockGeneration}
+                label="Enable Effortless Auto-Mock Generation"
+              />
+            </div>
+            {isMockGenerationEnabled && (
+                <div className="px-12 py-3 border-b dark:border-slate-800 flex-wrap pt-4">
+                    <TextArea
+                      placeholder="Insert a name for your mock…"
+                      value={mockFilename}
+                      onChange={(e) => setMockFilename(e.target.value)}
+                      rows={1}
+                      resize="none"
+                    />
+                </div>
+             )}
+          </div>
           <div className="px-12">
             <ReplHeader
               onSelectAll={() => setSelected(repl.commands.map((c) => c.id))}
@@ -133,6 +133,25 @@ const ReplView = () => {
           </div>
         </div>
       ) : (
+        <div>
+        <div className="px-12 py-2">
+          <Toggle
+            checked={isMockGenerationEnabled}
+            onChange={toggleMockGeneration}
+            label="Enable Effortless Auto-Mock Generation"
+          />
+        </div>
+        {isMockGenerationEnabled && (
+            <div className="px-12 py-3 border-b dark:border-slate-800 flex-wrap pt-4">
+                <TextArea
+                  placeholder="Insert a name for your mock…"
+                  value={mockFilename}
+                  onChange={(e) => setMockFilename(e.target.value)}
+                  rows={1}
+                  resize="none"
+                />
+            </div>
+         )}
         <div className="px-12 py-6">
           <div className="flex px-12 flex-col items-center py-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl mb-4">
             <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl mb-4 shadow-xl">
@@ -150,6 +169,7 @@ const ReplView = () => {
             error={errorMessage}
             setError={setErrorMessage}
           />
+        </div>
         </div>
       )}
       {/* <div className="px-12">
