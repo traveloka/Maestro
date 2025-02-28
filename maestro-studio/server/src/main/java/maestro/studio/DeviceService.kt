@@ -25,6 +25,7 @@ import kotlin.io.path.createTempDirectory
 import maestro.orchestra.MaestroCommand
 import maestro.orchestra.yaml.YamlCommandReader
 import maestro.orchestra.yaml.YamlFluentCommand
+import java.io.BufferedReader
 
 private data class RunCommandRequest(
     val yaml: String,
@@ -38,6 +39,10 @@ private data class FormatCommandsRequest(
 private data class FormattedFlow(
     val config: String,
     val commands: String,
+)
+
+private data class FilenameRequest(
+    val filename: String,
 )
 
 object DeviceService {
@@ -62,6 +67,61 @@ object DeviceService {
                 val response = jacksonObjectMapper().writeValueAsString(commands)
                 call.respond(response)
             } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
+            }
+        }
+        routing.post("/api/get-mock") {
+            try {
+                val request = call.parseBody<FilenameRequest>()
+                val process = ProcessBuilder("python3", "script/get_mock.py", request.filename)
+                    .redirectErrorStream(true)
+                    .start()
+
+                val output = process.inputStream.bufferedReader().use(BufferedReader::readText)
+                val exitCode = process.waitFor()
+
+                if (exitCode != 0) {
+                    println("get_mock.py failed with exit code $exitCode: $output")
+                    throw Exception("get_mock.py failed with exit code $exitCode")
+                }
+
+                if (output.trim().isNotEmpty()) {
+                    try {
+                        jacksonObjectMapper().readTree(output).forEach { node ->
+                            if (!node.isObject) {
+                                throw Exception("the python script does not response in valid json")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("the python script does not response in valid json: $e")
+                        throw Exception("the python script does not response in valid json")
+                    }
+                }
+
+                val response = jacksonObjectMapper().writeValueAsString(output)
+                call.respond(response)
+            } catch (e: Exception) {
+                println("Error in run command v2 $e")
+                call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
+            }
+        }
+        routing.post("/api/flush-mock") {
+            try {
+                val process = ProcessBuilder("python3", "script/flush_mock.py")
+                    .redirectErrorStream(true)
+                    .start()
+
+                val output = process.inputStream.bufferedReader().use(BufferedReader::readText)
+                val exitCode = process.waitFor()
+
+                if (exitCode != 0) {
+                    println("flush_mock.py failed with exit code $exitCode: $output")
+                    throw Exception("flush_mock.py failed with exit code $exitCode")
+                }
+                val response = jacksonObjectMapper().writeValueAsString(output)
+                call.respond(response)
+            } catch (e: Exception) {
+                println("Error in run command v2 $e")
                 call.respond(HttpStatusCode.BadRequest, e.message ?: "Failed to run command")
             }
         }

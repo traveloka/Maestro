@@ -13,7 +13,12 @@ const ReplContext = createContext<{
   setRepl: React.Dispatch<React.SetStateAction<Repl>>;
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
-}>({ repl: initialState, setRepl: () => {}, errorMessage: null, setErrorMessage: () => {} });
+  isMockGenerationEnabled: boolean;
+  toggleMockGeneration: () => void;
+  mockFilename: string;
+  setMockFilename: React.Dispatch<React.SetStateAction<string>>;
+}>({ repl: initialState, setRepl: () => {}, errorMessage: null, setErrorMessage: () => {}, isMockGenerationEnabled: true,
+toggleMockGeneration: () => {}, mockFilename: "", setMockFilename: () => {} });
 
 const restoreRepl = () => {
   const savedRepl = localStorage.getItem('repl');
@@ -29,13 +34,19 @@ export const ReplProvider = ({ children }: {
 }) => {
   const [repl, setRepl] = useState<Repl>(() => restoreRepl());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isMockGenerationEnabled, changeToggle] = useState(true);
+  const [mockFilename, setMockFilename] = useState("");
 
   useEffect(() => {
     localStorage.setItem('repl', JSON.stringify(repl));
   }, [repl]);
 
+  const toggleMockGeneration = () => {
+    changeToggle(prev => !prev);
+  };
+
   return (
-    <ReplContext.Provider value={{ repl, setRepl, errorMessage, setErrorMessage }}>
+    <ReplContext.Provider value={{ repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration, mockFilename, setMockFilename }}>
       {children}
     </ReplContext.Provider>
   );
@@ -44,7 +55,7 @@ export const ReplProvider = ({ children }: {
 export const useRepl = () => {
   const context = useContext(ReplContext);
 
-  const { repl, setRepl, errorMessage, setErrorMessage } = context;
+  const { repl, setRepl, errorMessage, setErrorMessage, isMockGenerationEnabled, toggleMockGeneration, mockFilename, setMockFilename } = context;
 
   const setCommandStatus = (id: string, commandStatus: ReplCommandStatus) => {
     setRepl(prevRepl => ({
@@ -90,6 +101,28 @@ export const useRepl = () => {
     setCommandStatus(command.id, 'running');
     try {
       await API.runCommand(command.yaml);
+
+      if (isMockGenerationEnabled) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          const mockReplCommands = await runGetMocks(mockFilename);
+
+          setRepl(prevRepl => {
+              const newCommands = prevRepl.commands;
+              var index = newCommands.findIndex(c => c.id === command.id);
+              for(let mockReplCommand of mockReplCommands){
+                newCommands.splice(index, 0, mockReplCommand);
+                index += 1;
+              }
+              return {
+                  ...prevRepl,
+                  commands: newCommands
+              };
+          });
+      } else {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await flushMocks();
+      }
+
       setCommandStatus(command.id, 'success');
       return true;
     } catch (e: any) {
@@ -140,6 +173,45 @@ export const useRepl = () => {
     return await runCommands(commands);
   }
 
+  const runGetMocks = async (filename: string): Promise<ReplCommand[]> => {
+    const rawResult = await API.getMock(filename);
+
+    // Ensure rawResult is a valid JSON string representing an array
+    let parsedResults: { runScript?: { file?: string; env?: any } }[] = [];
+    try {
+        parsedResults = JSON.parse(rawResult); // Parse the entire string as an array
+        if (!Array.isArray(parsedResults)) {
+            throw new Error("Parsed result is not an array");
+        }
+    } catch (error) {
+        console.error("Failed to parse API response:", rawResult, error);
+        setErrorMessage("Error parsing API response");
+        return [];
+    }
+
+    // Update REPL state for mock results
+    const newCommands = parsedResults.map(item => {
+        const env = item.runScript?.env || {}; // Ensure env is always an object
+        const mockResult = {
+            runScript: {
+                file: item.runScript?.file || "script/reproxy.js",
+                env: {
+                    mode: env.mode,
+                    api: env.api,
+                    behavior: env.behavior
+                }
+            }
+        };
+        return YAML.stringify(mockResult);
+    }).flatMap(parsed => parseCommands(parsed))
+    newCommands.forEach(command => command.status = 'success');
+    return newCommands;
+  }
+
+  const flushMocks = async (): Promise<void> => {
+    await API.flushMock();
+  }
+
   const runCommandIds = async (ids: string[]): Promise<boolean> => {
     const commands = repl.commands.filter(command => ids.includes(command.id));
     return await runCommands(commands);
@@ -153,6 +225,10 @@ export const useRepl = () => {
     runCommandIds,
     deleteCommands,
     reorderCommands,
+    isMockGenerationEnabled,
+    toggleMockGeneration,
+    mockFilename,
+    setMockFilename,
   };
 };
 
