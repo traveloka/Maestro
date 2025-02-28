@@ -17,7 +17,7 @@ const ReplContext = createContext<{
   toggleMockGeneration: () => void;
   mockFilename: string;
   setMockFilename: React.Dispatch<React.SetStateAction<string>>;
-}>({ repl: initialState, setRepl: () => {}, errorMessage: null, setErrorMessage: () => {}, isMockGenerationEnabled: false,
+}>({ repl: initialState, setRepl: () => {}, errorMessage: null, setErrorMessage: () => {}, isMockGenerationEnabled: true,
 toggleMockGeneration: () => {}, mockFilename: "", setMockFilename: () => {} });
 
 const restoreRepl = () => {
@@ -34,7 +34,7 @@ export const ReplProvider = ({ children }: {
 }) => {
   const [repl, setRepl] = useState<Repl>(() => restoreRepl());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isMockGenerationEnabled, changeToggle] = useState(false);
+  const [isMockGenerationEnabled, changeToggle] = useState(true);
   const [mockFilename, setMockFilename] = useState("");
 
   useEffect(() => {
